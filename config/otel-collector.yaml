@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+# OpenTelemetry Collector: GenAI spans -> Hivemind Receipts (zero-code capture
+# for already-instrumented stacks). The converter is
+# src/receipts/integrations/otel-processor.ts (a small OTLP/HTTP service in
+# this repo); the Collector ships spans to it alongside your normal backend.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch: {}
+  # Keep only GenAI action spans for the receipts leg.
+  filter/receipts:
+    traces:
+      span:
+        - 'attributes["gen_ai.operation.name"] == "execute_tool" or attributes["gen_ai.operation.name"] == "invoke_agent"'
+
+exporters:
+  otlphttp/receipts:
+    endpoint: http://receipts-otel-processor:4319
+    tls: { insecure: true }
+  otlphttp/backend:
+    endpoint: https://your-traces-backend.example:4318
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/backend]
+    traces/receipts:
+      receivers: [otlp]
+      processors: [filter/receipts, batch]
+      exporters: [otlphttp/receipts]
