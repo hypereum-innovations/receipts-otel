@@ -1,3 +1,5 @@
+> **Retired preview, not maintained.**
+
 # `receipts-otel`
 
 SPDX-License-Identifier: Apache-2.0
